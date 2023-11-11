@@ -13,8 +13,13 @@ jwt = JWTManager(app)
 # create_access_token() function is used to actually generate the JWT.
 @app.route("/login", methods=["POST"])
 def login():
-    username = request.json.get("username", None)
-    password = request.json.get("password", None)
+    try:
+        username = request.json["username"]
+        password = request.json["password"]
+    # username = request.json.get("username", None)
+    # password = request.json.get("password", None)
+    except KeyError:
+        return jsonify({"msg": "Missing username or password in JSON"}), 400
     if username != "test" or password != "test":
         return jsonify({"msg": "Bad username or password"}), 401
 
@@ -56,7 +61,7 @@ def upload_file():
 
     f = request.files['file']
     f.save(secure_filename(f.filename))
-    available_files.append(f.filename)
+    available_files.append(secure_filename(f.filename))
     return 'file uploaded successfully'
 
 
@@ -75,16 +80,23 @@ def upload_page():
 @app.route('/get_file', methods=['GET'])
 @jwt_required()
 def get_file():
-    current_user = get_jwt_identity()
-    if current_user != 'user1':
-        return jsonify({'error': 'Unauthorized'}), 403
+    check_result = check_user_permissions('user1')
+    if check_result:
+        return check_result
 
     file_name = request.args.get('file_name')
-    if file_name:
-        try:
-            return send_from_directory('', file_name)
-        except FileNotFoundError:
-            return jsonify({'error': 'File not found'}), 404
+    if not file_name:
+        return jsonify({'error': "Missing file_name parameter"}), 400
+    try:
+        return send_from_directory('', file_name)
+    except FileNotFoundError:
+        return jsonify({'error': 'File not found'}), 404
+
+
+def check_user_permissions(user):
+    current_user = get_jwt_identity()
+    if current_user != user:
+        return jsonify({'error': 'Unauthorized'}), 403
 
 
 if __name__ == '__main__':
