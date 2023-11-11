@@ -4,9 +4,35 @@ from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
 
-
 app.config["JWT_SECRET_KEY"] = "jakis_sobie_tajnyklucz"
 jwt = JWTManager(app)
+
+available_files = []
+
+
+def check_credentials(username: str, password: str):
+    # here we should call DB to check if username and password match
+    # ex: result: boolean = check(username,password) and return false
+    # since we don't have db for now it will always return true
+    return True
+
+
+def generate_access_token(username):
+    return create_access_token(identity=username)
+
+
+def get_user_files(username: str):
+    # here based on query with username to the db we should return user_files json
+    # which could look like:
+    # { username: "name", files: [{filename:"filename1.jpg",
+    # directory: "directory", size: 1000}, {filename: ... }] }
+
+    return {}
+
+
+def save_to_blob_storage(file):
+    # here we will save the file to the external storage
+    return True
 
 
 # Create a route to authenticate your users and return JWTs. The
@@ -20,10 +46,12 @@ def login():
     # password = request.json.get("password", None)
     except KeyError:
         return jsonify({"msg": "Missing username or password in JSON"}), 400
-    if username != "test" or password != "test":
+
+    if check_credentials(username, password):
+        access_token = create_access_token(identity=username)
+    else:
         return jsonify({"msg": "Bad username or password"}), 401
 
-    access_token = create_access_token(identity=username)
     return jsonify(access_token=access_token)
 
 
@@ -45,10 +73,9 @@ available_files = []
 @jwt_required()
 def get_available_files():
     current_user = get_jwt_identity()
-    if current_user != 'user1':
-        return jsonify({'error': 'Unauthorized'}), 403
+    files = get_user_files(current_user)
 
-    return jsonify({'available_files': available_files}), 200
+    return jsonify(files), 200
 
 
 # Endpoint do przesyłania plików
@@ -56,47 +83,14 @@ def get_available_files():
 @jwt_required()
 def upload_file():
     current_user = get_jwt_identity()
-    if current_user != 'user1':
-        return jsonify({'error': 'Unauthorized'}), 403
 
-    f = request.files['file']
-    f.save(secure_filename(f.filename))
-    available_files.append(secure_filename(f.filename))
+    save_to_blob_storage(None)
+
+    # f = request.files['file']
+    # f.save(secure_filename(f.filename))
+    # available_files.append(f.filename)
+
     return 'file uploaded successfully'
-
-
-# Endpoint do wyświetlania strony upload.html
-@app.route('/upload_page', methods=['GET'])
-@jwt_required()
-def upload_page():
-    current_user = get_jwt_identity()
-    if current_user != 'user1':
-        return jsonify({'error': 'Unauthorized'}), 403
-
-    return render_template('upload.html')
-
-
-# Endpoint do pobierania plików, nie w sumie czy potrzebny
-@app.route('/get_file', methods=['GET'])
-@jwt_required()
-def get_file():
-    check_result = check_user_permissions('user1')
-    if check_result:
-        return check_result
-
-    file_name = request.args.get('file_name')
-    if not file_name:
-        return jsonify({'error': "Missing file_name parameter"}), 400
-    try:
-        return send_from_directory('', file_name)
-    except FileNotFoundError:
-        return jsonify({'error': 'File not found'}), 404
-
-
-def check_user_permissions(user):
-    current_user = get_jwt_identity()
-    if current_user != user:
-        return jsonify({'error': 'Unauthorized'}), 403
 
 
 if __name__ == '__main__':
