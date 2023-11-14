@@ -84,5 +84,10 @@ def upload_file():
     return 'file uploaded successfully'
 
 
+@app.route('/', methods=['GET'])
+def test():
+    return "true", 200
+
+
 if __name__ == '__main__':
     app.run(debug=True)
