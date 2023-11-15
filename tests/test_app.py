@@ -1,4 +1,7 @@
 import pytest
+from flask import jsonify
+import json
+
 from main import app
 
 
@@ -41,3 +44,18 @@ def test_upload_file(client):
     response = client.post('/upload', headers={'Authorization': f'Bearer {token}'})
     assert response.status_code == 200
     assert response.get_data(as_text=True) == 'file uploaded successfully'
+
+
+def test_get_available_files(client):
+    response = client.get('/available_files')
+    assert response.status_code == 401
+
+    login_response = client.post('/login', json={"username": "user1", "password": "hashed_password_1"})
+    token = login_response.json['access_token']
+
+    response = client.get('/available_files', headers={'Authorization': f'Bearer {token}'})
+    response_data = response.json
+    assert response.status_code == 200
+    assert response_data['data'][0]['name'] == 'image1.jpg'
+    assert response_data['data'][1]['name'] == 'image2.jpg'
+    assert response_data['data'][2]['name'] == 'image3.jpg'

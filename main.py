@@ -3,32 +3,25 @@ import os
 from flask import Flask, render_template, request, send_from_directory, abort, jsonify
 from flask_jwt_extended import JWTManager, jwt_required, create_access_token, get_jwt_identity
 
+from dbConnection import match_credentials_query, get_user_id_query, get_user_files_query
+
 app = Flask(__name__)
 
 app.config["JWT_SECRET_KEY"] = "jakis_sobie_tajnyklucz"
 jwt = JWTManager(app)
 
 available_files = []
+access_tokens = {}
 
 
-def check_credentials(username: str, password: str):
-    # here we should call DB to check if username and password match
-    # ex: result: boolean = check(username,password) and return false
-    # since we don't have db for now it will always return true
-    return True
-
+# so now assuming i have access token
 
 def generate_access_token(username):
     return create_access_token(identity=username)
 
 
-def get_user_files(username: str):
-    # here based on query with username to the db we should return user_files json
-    # which could look like:
-    # { username: "name", files: [{filename:"filename1.jpg",
-    # directory: "directory", size: 1000}, {filename: ... }] }
-
-    return {}
+def get_user_files(user_id: int):
+    return get_user_files_query(user_id)
 
 
 def save_to_blob_storage(file):
@@ -43,8 +36,10 @@ def login():
     username = request.json.get("username", None)
     password = request.json.get("password", None)
 
-    if check_credentials(username, password):
+    if match_credentials_query(username, password):
         access_token = create_access_token(identity=username)
+        id = get_user_id_query(username)
+        access_tokens[access_token] = id
     else:
         return jsonify({"msg": "Bad username or password"}), 401
 
@@ -66,9 +61,8 @@ def protected():
 @jwt_required()
 def get_available_files():
     current_user = get_jwt_identity()
-    files = get_user_files(current_user)
-
-    return jsonify(files), 200
+    files = get_user_files(get_user_id_query(current_user))
+    return jsonify(data=[e.serialize() for e in files]), 200
 
 
 # Endpoint do przesyłania plików
@@ -89,6 +83,11 @@ def upload_file():
 @app.route('/', methods=['GET'])
 def test():
     return "true", 200
+
+
+@app.route('/tokens', methods=['GET'])
+def test2():
+    return access_tokens
 
 
 if __name__ == '__main__':
