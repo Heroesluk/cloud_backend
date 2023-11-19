@@ -3,7 +3,13 @@ import os
 from flask import Flask, render_template, request, send_from_directory, abort, jsonify
 from flask_jwt_extended import JWTManager, jwt_required, create_access_token, get_jwt_identity
 
-from dbConnection import match_credentials_query, get_user_id_query, get_user_files_query
+from passlib.hash import pbkdf2_sha256
+from psycopg2.sql import DEFAULT
+
+from dbConnection import match_credentials_query, get_user_id_query, get_user_by_username_query, get_user_files_query
+from Exceptions import UserTableDuplicateUsername
+import psycopg2
+from models import User
 
 app = Flask(__name__)
 
@@ -12,7 +18,6 @@ jwt = JWTManager(app)
 
 available_files = []
 access_tokens = {}
-
 
 # so now assuming i have access token
 
@@ -88,6 +93,63 @@ def test():
 @app.route('/tokens', methods=['GET'])
 def test2():
     return access_tokens
+
+
+@app.route("/register", methods=["POST"])
+def register():
+    user_data = request.json
+
+    try:
+        # Check if the user exists
+        existing_user = get_user_by_username_query(user_data["username"])
+        if existing_user:
+            raise UserTableDuplicateUsername(user_data["username"])
+
+        # If the user doesn't exist then
+        new_user = User(
+            DEFAULT,
+            username=user_data["username"],
+            password=pbkdf2_sha256.hash(user_data["password"]),
+            email=user_data["email"]
+        )
+
+        add_user_to_db(new_user)
+
+    except UserTableDuplicateUsername as e:
+        return jsonify({"msg": str(e)}), 400
+    except Exception as e:
+        return jsonify({"msg": "Error during user registration"}), 500
+
+    return jsonify({"msg": "User registered successfully"}), 200
+
+
+def add_user_to_db(user):
+    conn = psycopg2.connect(
+        host="34.79.134.188",
+        user="postgres",
+        password="piwo2137",
+        dbname="users"
+    )
+
+    try:
+        cur = conn.cursor()
+
+        cur.execute("INSERT INTO users (username, password, email) VALUES (%s, %s, %s) RETURNING id",
+                    (user.username, user.password, user.email))
+
+        new_user_id = cur.fetchone()[0]
+
+        conn.commit()
+        cur.close()
+
+        user.id = new_user_id
+
+    except Exception as e:
+        conn.rollback()
+        raise e
+
+    finally:
+        conn.close()
 
 
 if __name__ == '__main__':
