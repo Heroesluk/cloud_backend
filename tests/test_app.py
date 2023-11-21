@@ -1,8 +1,10 @@
 import pytest
 from flask import jsonify
 import json
-
-from main import app
+import unittest
+from unittest.mock import Mock, patch, MagicMock
+from main import app, add_user_to_db
+from Exceptions import UserTableDuplicateUsername
 
 
 @pytest.fixture
@@ -59,3 +61,19 @@ def test_get_available_files(client):
     assert response_data['data'][0]['name'] == 'image1.jpg'
     assert response_data['data'][1]['name'] == 'image2.jpg'
     assert response_data['data'][2]['name'] == 'image3.jpg'
+
+
+@patch('main.add_user_to_db', MagicMock())
+def test_register(client):
+    data = {"name": "test_name", "password": "tralala", "email": "nieee@tak.com"}
+    mock_response = client.post('/register', json=data)
+    assert mock_response.status_code == 200
+
+# sprawdza czy została funckja wywołanan z dobrymi argumentami (czy poprawnie dodany do bazy danych)
+    add_user_to_db.assert_called_once_with(
+        MagicMock(username="test_name", password=MagicMock(), email="nieee@tak.com")
+    )
+
+    # Sprawdź, czy wyjątek jest rzucony przy dodawaniu istniejącego użytkownika
+    with pytest.raises(UserTableDuplicateUsername, match="User already exists"):
+        client.post('/register', json=data)
