@@ -32,6 +32,16 @@ def match_credentials_query(username, password) -> bool:
     return cur.fetchone()[0]
 
 
+def getAllUsers():
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM users")
+
+    print(cur.fetchall())
+
+
+getAllUsers()
+
+
 def get_user_id_query(username):
     cur = conn.cursor()
     cur.execute("SELECT user_id FROM users WHERE username = %s", (username,))
@@ -51,6 +61,3 @@ def get_user_files_query(id: int):
 
 
 
-# print(get_user_files(1))
-# print(match_credentials("user2", "hashed_password_2"))
-# print(get_user_id("user1"))

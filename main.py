@@ -4,17 +4,16 @@ from flask import Flask, render_template, request, send_from_directory, abort, j
 from flask_jwt_extended import JWTManager, jwt_required, create_access_token, get_jwt_identity
 
 from dbConnection import match_credentials_query, get_user_id_query, get_user_files_query
+from flask_cors import CORS
 
 app = Flask(__name__)
+CORS(app) # This will enable CORS for all routes
 
 app.config["JWT_SECRET_KEY"] = "jakis_sobie_tajnyklucz"
 jwt = JWTManager(app)
 
 available_files = []
 access_tokens = {}
-
-
-# so now assuming i have access token
 
 def generate_access_token(username):
     return create_access_token(identity=username)

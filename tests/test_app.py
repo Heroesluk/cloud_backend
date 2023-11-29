@@ -5,6 +5,8 @@ import json
 from main import app
 
 
+
+
 @pytest.fixture
 def client():
     app.config['TESTING'] = True
@@ -13,7 +15,7 @@ def client():
 
 
 def test_login(client):
-    response = client.post('/login', json={"username": "user1", "password": "test"})
+    response = client.post('/login', json={"username": "user1", "password": "hashed_password_1"})
     assert response.status_code == 200
     assert 'access_token' in response.json
 
@@ -23,7 +25,7 @@ def test_protected_route(client):
     assert response.status_code == 401  # Unauthorized, as we didn't provide a token
 
     # Log in to get a token
-    login_response = client.post('/login', json={"username": "user1", "password": "test"})
+    login_response = client.post('/login', json={"username": "user1", "password": "hashed_password_1"})
     token = login_response.json['access_token']
 
     # Access protected route with the obtained token
@@ -37,7 +39,7 @@ def test_upload_file(client):
     assert response.status_code == 401  # Unauthorized, as we didn't provide a token
 
     # Log in to get a token
-    login_response = client.post('/login', json={"username": "user1", "password": "test"})
+    login_response = client.post('/login', json={"username": "user1", "password": "hashed_password_1"})
     token = login_response.json['access_token']
 
     # Access upload_file route with the obtained token
