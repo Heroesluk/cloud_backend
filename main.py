@@ -3,17 +3,25 @@ import os
 from flask import Flask, render_template, request, send_from_directory, abort, jsonify
 from flask_jwt_extended import JWTManager, jwt_required, create_access_token, get_jwt_identity
 
-from dbConnection import match_credentials_query, get_user_id_query, get_user_files_query
+from dbConnection import match_credentials_query, get_user_id_query, get_user_files_query, get_user_by_username_query, \
+    add_user_to_db
 from flask_cors import CORS
+from psycopg2.sql import DEFAULT
+
+from fileManagement import get_signed_urls_for_user
+from models import User
 
 app = Flask(__name__)
-CORS(app) # This will enable CORS for all routes
+CORS(app)  # This will enable CORS for all routes
 
 app.config["JWT_SECRET_KEY"] = "jakis_sobie_tajnyklucz"
 jwt = JWTManager(app)
 
 available_files = []
 access_tokens = {}
+
+bucket_storage = 'cloud_image_bucket'
+
 
 def generate_access_token(username):
     return create_access_token(identity=username)
@@ -56,12 +64,21 @@ def protected():
 
 
 # Endpoint do pobierania dostępnych plików
+# @app.route('/available_files', methods=['GET'])
+# @jwt_required()
+# def get_available_files():
+#     current_user = get_jwt_identity()
+#     images = get_user_files(get_user_id_query(current_user))
+#     get_signed_urls_for_user(bucket_storage,[str(i.folder_id) for i in images])
+#     return jsonify(data=[e.serialize() for e in files]), 200
+
+
 @app.route('/available_files', methods=['GET'])
-@jwt_required()
 def get_available_files():
-    current_user = get_jwt_identity()
-    files = get_user_files(get_user_id_query(current_user))
-    return jsonify(data=[e.serialize() for e in files]), 200
+    # current_user = get_jwt_identity()
+    images = get_user_files(1)
+    images_with_urls = get_signed_urls_for_user(bucket_storage,images)
+    return jsonify(data=[e.serialize() for e in images_with_urls]), 200
 
 
 # Endpoint do przesyłania plików
@@ -87,6 +104,35 @@ def test():
 @app.route('/tokens', methods=['GET'])
 def test2():
     return access_tokens
+
+
+@app.route("/register", methods=["POST"])
+def register():
+    user_data = request.json
+
+    try:
+        # Check if the user exists
+        existing_user = get_user_by_username_query(user_data["username"])
+        if existing_user:
+            return jsonify({"msg": f"user {str(existing_user)} already exists"}), 400
+
+        # If the user doesn't exist then
+        new_user = User(
+            DEFAULT,
+            username=user_data["username"],
+            password=user_data["password"],
+            email=user_data["email"]
+        )
+
+        add_user_to_db(new_user)
+    except Exception as e:
+        return jsonify({"msg": "Error during user registration"}), 500
+
+    return jsonify({"msg": "User registered successfully"}), 200
+
+
+
+
 
 
 if __name__ == '__main__':

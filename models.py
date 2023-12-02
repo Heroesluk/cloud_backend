@@ -16,6 +16,7 @@ class Image:
         self.folder_id = folder_id
         self.id = id
         self.name = name
+        self.signed_url = None
 
     def serialize(self):
         return {
@@ -23,5 +24,6 @@ class Image:
             'name': self.name,
             'folder_id': self.folder_id,
             'image_size': self.image_size,
-            'image_add_date': self.image_add_date
+            'image_add_date': self.image_add_date,
+            'url': self.signed_url
         }

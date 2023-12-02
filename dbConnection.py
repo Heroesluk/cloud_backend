@@ -49,7 +49,7 @@ def get_user_id_query(username):
     return cur.fetchone()[0]
 
 
-def get_user_files_query(id: int):
+def get_user_files_query(id: int) -> list[Image]:
     cur = conn.cursor()
     cur.execute("SELECT * FROM images WHERE folder_id = %s", (id,))
 
@@ -60,4 +60,30 @@ def get_user_files_query(id: int):
     return [Image(r[0], r[1], r[2], r[3], r[4]) for r in records]
 
 
+def add_user_to_db(user):
+    conn = psycopg2.connect(
+        host="34.79.134.188",
+        user="postgres",
+        password="piwo2137",
+        dbname="users"
+    )
 
+    try:
+        cur = conn.cursor()
+
+        cur.execute("INSERT INTO users (username, password, email) VALUES (%s, %s, %s) RETURNING id",
+                    (user.username, user.password, user.email))
+
+        new_user_id = cur.fetchone()[0]
+
+        conn.commit()
+        cur.close()
+
+        user.id = new_user_id
+
+    except Exception as e:
+        conn.rollback()
+        raise e
+
+    finally:
+        conn.close()

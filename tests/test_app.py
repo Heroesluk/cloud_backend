@@ -61,3 +61,13 @@ def test_get_available_files(client):
     assert response_data['data'][0]['name'] == 'image1.jpg'
     assert response_data['data'][1]['name'] == 'image2.jpg'
     assert response_data['data'][2]['name'] == 'image3.jpg'
+
+
+def test_register(client):
+    data = {"name": "test_name", "password": "tralala", "email": "nieee@tak.com"}
+    response = client.post('/register', json=data)
+    assert response.status_code == 200
+
+
+
+    # response = client.post('/register', json=data)
