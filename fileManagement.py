@@ -5,7 +5,7 @@ from google.cloud import storage
 
 from models import Image
 
-os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "secrets/ageless-webbing-405115-dfeddeb7c47c.json"
+os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "ageless-webbing-405115-dfeddeb7c47c.json"
 
 bucket_storage = 'cloud_image_bucket'
 
