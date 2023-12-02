@@ -125,7 +125,7 @@ def register():
         # Check if the user exists
         existing_user = get_user_by_username_query(user_data["username"])
         if existing_user:
-            return jsonify({"msg": f"user {str(existing_user)} already exists"}), 400
+            return jsonify({"msg": f"user {str(existing_user.username)} already exists"}), 400
 
         # If the user doesn't exist then
         new_user = User(
@@ -137,6 +137,7 @@ def register():
 
         add_user_to_db(new_user)
     except Exception as e:
+        print(e)
         return jsonify({"msg": "Error during user registration"}), 500
 
     return jsonify({"msg": "User registered successfully"}), 200

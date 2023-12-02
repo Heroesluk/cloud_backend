@@ -1,6 +1,4 @@
 import pytest
-from flask import jsonify
-import json
 
 from main import app
 

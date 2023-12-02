@@ -76,28 +76,20 @@ def add_user_to_db(user):
     try:
         cur = conn.cursor()
 
-        cur.execute("INSERT INTO users (username, password, email) VALUES (%s, %s, %s) RETURNING id",
-                    (user.username, user.password, user.email))
-
-        new_user_id = cur.fetchone()[0]
+        cur.execute("INSERT INTO users (user_id,username, password_hash, email) VALUES (%s,%s, %s, %s)",
+                    (get_new_user_id(), user.username, user.password, user.email))
 
         conn.commit()
         cur.close()
-
-        user.id = new_user_id
 
     except Exception as e:
         conn.rollback()
         raise e
 
-    finally:
-        conn.close()
-
 
 def add_image_data_to_db(image: Image) -> str:
     try:
         cur = conn.cursor()
-        print()
         cur.execute(
             "INSERT INTO images (image_id,image_name, folder_id, image_size, image_add_date) VALUES (%s,%s, %s, %s, %s)",
             (get_new_img_id(), image.name, image.folder_id, image.image_size,
@@ -109,10 +101,8 @@ def add_image_data_to_db(image: Image) -> str:
         conn.rollback()
         print(e)
 
-    finally:
-        conn.close()
-        return str(image.folder_id) + "/" + image.name
 
+    return str(image.folder_id) + "/" + image.name
 
 # test = Image(0, "newimg", 1, 1000, datetime.datetime.now())
 #
