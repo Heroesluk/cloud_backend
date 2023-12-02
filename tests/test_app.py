@@ -5,8 +5,6 @@ import json
 from main import app
 
 
-
-
 @pytest.fixture
 def client():
     app.config['TESTING'] = True
@@ -67,7 +65,5 @@ def test_register(client):
     data = {"name": "test_name", "password": "tralala", "email": "nieee@tak.com"}
     response = client.post('/register', json=data)
     assert response.status_code == 200
-
-
 
     # response = client.post('/register', json=data)

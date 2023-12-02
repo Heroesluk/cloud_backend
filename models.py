@@ -27,3 +27,6 @@ class Image:
             'image_add_date': self.image_add_date,
             'url': self.signed_url
         }
+
+    def get_bucket_path(self):
+        return str(self.folder_id) + "/" + self.name

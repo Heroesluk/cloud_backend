@@ -1,15 +1,17 @@
+import datetime
 import os
 
 from flask import Flask, render_template, request, send_from_directory, abort, jsonify
 from flask_jwt_extended import JWTManager, jwt_required, create_access_token, get_jwt_identity
+from werkzeug.utils import secure_filename
 
 from dbConnection import match_credentials_query, get_user_id_query, get_user_files_query, get_user_by_username_query, \
-    add_user_to_db
+    add_user_to_db, add_image_data_to_db
 from flask_cors import CORS
 from psycopg2.sql import DEFAULT
 
-from fileManagement import get_signed_urls_for_user
-from models import User
+from fileManagement import get_signed_urls_for_user, upload_file_to_bucket
+from models import User, Image
 
 app = Flask(__name__)
 CORS(app)  # This will enable CORS for all routes
@@ -18,7 +20,8 @@ app.config["JWT_SECRET_KEY"] = "jakis_sobie_tajnyklucz"
 jwt = JWTManager(app)
 
 available_files = []
-access_tokens = {}
+# stores k,v pair where key is token and value is user id
+access_token_users_dict = {}
 
 bucket_storage = 'cloud_image_bucket'
 
@@ -46,7 +49,7 @@ def login():
     if match_credentials_query(username, password):
         access_token = create_access_token(identity=username)
         id = get_user_id_query(username)
-        access_tokens[access_token] = id
+        access_token_users_dict[access_token] = id
     else:
         return jsonify({"msg": "Bad username or password"}), 401
 
@@ -74,10 +77,11 @@ def protected():
 
 
 @app.route('/available_files', methods=['GET'])
+@jwt_required()
 def get_available_files():
-    # current_user = get_jwt_identity()
-    images = get_user_files(1)
-    images_with_urls = get_signed_urls_for_user(bucket_storage,images)
+    current_user = get_jwt_identity()
+    images = get_user_files(get_user_id_query(current_user))
+    images_with_urls = get_signed_urls_for_user(bucket_storage, images)
     return jsonify(data=[e.serialize() for e in images_with_urls]), 200
 
 
@@ -86,14 +90,17 @@ def get_available_files():
 @jwt_required()
 def upload_file():
     current_user = get_jwt_identity()
+    f = request.files['file']
+    filename = secure_filename(f.filename)
+    f.save(filename)
+    available_files.append(f.filename)
+    img = Image(0, filename, get_user_id_query(current_user),
+                f.__sizeof__(), datetime.datetime.now())
+    print(img.serialize())
+    add_image_data_to_db(img)
+    link = upload_file_to_bucket(bucket_storage, filename, img.get_bucket_path())
 
-    save_to_blob_storage(None)
-
-    # f = request.files['file']
-    # f.save(secure_filename(f.filename))
-    # available_files.append(f.filename)
-
-    return 'file uploaded successfully'
+    return str(link)
 
 
 @app.route('/', methods=['GET'])
@@ -103,7 +110,7 @@ def test():
 
 @app.route('/tokens', methods=['GET'])
 def test2():
-    return access_tokens
+    return access_token_users_dict
 
 
 @app.route("/register", methods=["POST"])
@@ -118,7 +125,7 @@ def register():
 
         # If the user doesn't exist then
         new_user = User(
-            DEFAULT,
+            0,
             username=user_data["username"],
             password=user_data["password"],
             email=user_data["email"]
@@ -129,10 +136,6 @@ def register():
         return jsonify({"msg": "Error during user registration"}), 500
 
     return jsonify({"msg": "User registered successfully"}), 200
-
-
-
-
 
 
 if __name__ == '__main__':

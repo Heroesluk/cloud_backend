@@ -15,6 +15,7 @@ def upload_file_to_bucket(bucket_name, file, destination_file_name) -> str:
     storage_client = storage.Client()
 
     bucket = storage_client.bucket(bucket_name)
+    print(file,destination_file_name)
 
     blob = bucket.blob(destination_file_name)
     blob.upload_from_filename(file)
@@ -43,7 +44,7 @@ def list_files_of_user(bucket_name, user=""):
 
 
 # print(get_signed_url(bucket_storage,'imageuser'))
-print(upload_file_to_bucket(bucket_storage, 'temp/test.jpg', '1/image2.jpg'))
+# print(upload_file_to_bucket(bucket_storage, 'temp/test.jpg', '1/image2.jpg'))
 
 
 def get_signed_urls_for_user(bucket_name, images: list[Image]) -> list[Image]:
