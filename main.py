@@ -90,15 +90,19 @@ def get_available_files():
 @jwt_required()
 def upload_file():
     current_user = get_jwt_identity()
-    f = request.files['file']
-    filename = secure_filename(f.filename)
-    f.save(filename)
-    available_files.append(f.filename)
+
+    file_data = request.files['file']
+    filename = secure_filename(file_data.filename)
+    file_data.save(filename)
+
+    size = os.path.getsize(filename)
+
     img = Image(0, filename, get_user_id_query(current_user),
-                f.__sizeof__(), datetime.datetime.now())
-    print(img.serialize())
+                size, datetime.datetime.now())
+
     add_image_data_to_db(img)
     link = upload_file_to_bucket(bucket_storage, filename, img.get_bucket_path())
+    os.remove(filename)
 
     return str(link)
 
