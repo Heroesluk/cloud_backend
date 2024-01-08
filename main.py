@@ -6,8 +6,9 @@ from flask_jwt_extended import JWTManager, jwt_required, create_access_token, ge
 from werkzeug.utils import secure_filename
 
 from dbConnection import match_credentials_query, get_user_id_query, get_user_files_query, get_user_by_username_query, \
-    add_user_to_db, add_image_data_to_db
-from flask_cors import CORS
+    add_user_to_db, add_image_data_to_db, delete_image_from_db, remove_image_from_cache, delete_image_from_storage, get_image_by_id
+
+from flask_cors import CORS, cross_origin
 from psycopg2.sql import DEFAULT
 
 from fileManagement import get_signed_urls_for_user, upload_file_to_bucket
@@ -142,6 +143,24 @@ def register():
 
     return jsonify({"msg": "User registered successfully"}), 200
 
+@app.route('/delete_image', methods=['POST'])
+@jwt_required()
+@cross_origin(origin='http://localhost:5173', methods=['POST', 'DELETE'], supports_credentials=True)
+def delete_image():
+    current_user = get_jwt_identity()
+    image_id = request.json.get('image_id', None)
+
+    image = get_image_by_id(image_id)
+    if not image or image.folder_id != get_user_id_query(current_user):
+        return jsonify({"msg": "Image not found or unauthorized"}), 404
+
+    delete_image_from_db(image_id)
+
+    remove_image_from_cache(image_id)
+
+    delete_image_from_storage(bucket_storage, image.get_bucket_path())
+
+    return jsonify({"msg": "Image deleted successfully"}), 200
 
 if __name__ == '__main__':
     app.run(debug=True, host="0.0.0.0", port=int(os.environ.get("PORT", 8080)))

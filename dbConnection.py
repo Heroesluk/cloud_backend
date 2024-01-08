@@ -104,6 +104,43 @@ def add_image_data_to_db(image: Image) -> str:
 
     return str(image.folder_id) + "/" + image.name
 
+
+def delete_image_from_db(image_id):
+    try:
+        cur = conn.cursor()
+        cur.execute("DELETE FROM images WHERE image_id = %s", (image_id,))
+        conn.commit()
+        cur.close()
+
+    except Exception as e:
+        conn.rollback()
+        print(e)
+
+def remove_image_from_cache(image_id):
+    pass
+
+def delete_image_from_storage(bucket_name, file_path):
+    try:
+        storage_client = storage.Client()
+        bucket = storage_client.bucket(bucket_name)
+
+        blob = bucket.blob(file_path)
+        blob.delete()
+
+    except Exception as e:
+        print(e)
+
+def get_image_by_id(image_id):
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM images WHERE image_id = %s", (image_id,))
+    record = cur.fetchone()
+    
+    if record:
+        return Image(record[0], record[1], record[2], record[3], record[4])
+    else:
+        return None
+
+
 # test = Image(0, "newimg", 1, 1000, datetime.datetime.now())
 #
 # add_image_data_to_db(test)
