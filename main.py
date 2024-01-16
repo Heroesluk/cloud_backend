@@ -163,5 +163,15 @@ def delete_image():
 
     return jsonify({"msg": "Image deleted successfully"}), 200
 
+
+@app.route('/docs')
+def swagger_ui():
+    return render_template('swagger_ui.html')
+
+
+@app.route('/spec')
+def get_spec():
+    return send_from_directory(app.root_path, 'openapi.yaml')
+
 if __name__ == '__main__':
     app.run(debug=True, host="0.0.0.0", port=int(os.environ.get("PORT", 8080)))
