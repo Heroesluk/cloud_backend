@@ -1,6 +1,8 @@
 import datetime
 from typing import Optional
 import psycopg2
+from google.cloud import storage
+
 from Exceptions import UserTableDuplicateUsername
 from models import User, Image
 
@@ -116,19 +118,8 @@ def delete_image_from_db(image_id):
         conn.rollback()
         print(e)
 
-def remove_image_from_cache(image_id):
-    pass
 
-def delete_image_from_storage(bucket_name, file_path):
-    try:
-        storage_client = storage.Client()
-        bucket = storage_client.bucket(bucket_name)
 
-        blob = bucket.blob(file_path)
-        blob.delete()
-
-    except Exception as e:
-        print(e)
 
 def get_image_by_id(image_id):
     cur = conn.cursor()

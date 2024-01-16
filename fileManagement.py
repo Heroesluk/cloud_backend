@@ -57,3 +57,19 @@ def get_signed_urls_for_user(bucket_name, images: list[Image]) -> list[Image]:
 # files = (list_files_of_user(bucket_storage))
 #
 # print(get_signed_urls_for_user(bucket_storage, files))
+
+
+def delete_image_from_storage(bucket_name, file_path):
+    try:
+        storage_client = storage.Client()
+        bucket = storage_client.bucket(bucket_name)
+
+        blob = bucket.blob(file_path)
+        blob.delete()
+
+    except Exception as e:
+        print(e)
+
+
+def remove_image_from_cache(image_id):
+    pass

@@ -6,12 +6,13 @@ from flask_jwt_extended import JWTManager, jwt_required, create_access_token, ge
 from werkzeug.utils import secure_filename
 
 from dbConnection import match_credentials_query, get_user_id_query, get_user_files_query, get_user_by_username_query, \
-    add_user_to_db, add_image_data_to_db, delete_image_from_db, remove_image_from_cache, delete_image_from_storage, get_image_by_id
+    add_user_to_db, add_image_data_to_db, delete_image_from_db, get_image_by_id
 
 from flask_cors import CORS, cross_origin
 from psycopg2.sql import DEFAULT
 
-from fileManagement import get_signed_urls_for_user, upload_file_to_bucket
+from fileManagement import get_signed_urls_for_user, upload_file_to_bucket, remove_image_from_cache, \
+    delete_image_from_storage
 from models import User, Image
 
 app = Flask(__name__)
