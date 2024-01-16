@@ -1,10 +1,9 @@
 import datetime
 from typing import Optional
 import psycopg2
-from google.cloud import storage
 
 from Exceptions import UserTableDuplicateUsername
-from models import User, Image
+from models import User, Image, LogEntry
 
 # Connect to your postgres DB
 conn = psycopg2.connect(
@@ -63,6 +62,13 @@ def get_new_img_id() -> int:
     return cur.fetchone()[0]
 
 
+def get_new_logger_id() -> int:
+    cur = conn.cursor()
+    cur.execute("SELECT nextval('logger_id_seq')")
+
+    return cur.fetchone()[0]
+
+
 def get_user_files_query(id: int) -> list[Image]:
     cur = conn.cursor()
     cur.execute("SELECT * FROM images WHERE folder_id = %s", (id,))
@@ -103,8 +109,24 @@ def add_image_data_to_db(image: Image) -> str:
         conn.rollback()
         print(e)
 
-
     return str(image.folder_id) + "/" + image.name
+
+
+def add_log_entry(log: LogEntry) -> str:
+    print(log)
+    try:
+        cur = conn.cursor()
+        cur.execute(
+            "INSERT INTO Logger (id, severity, timestamp, message) VALUES (%s,%s, %s, %s)",
+            (get_new_logger_id(), log.severity, log.timestamp.strftime("%m/%d/%Y, %H:%M:%S"), log.message))
+
+        conn.commit()
+        cur.close()
+    except Exception as e:
+        conn.rollback()
+        print(e)
+
+    return log.message
 
 
 def delete_image_from_db(image_id):
@@ -119,19 +141,12 @@ def delete_image_from_db(image_id):
         print(e)
 
 
-
-
 def get_image_by_id(image_id):
     cur = conn.cursor()
     cur.execute("SELECT * FROM images WHERE image_id = %s", (image_id,))
     record = cur.fetchone()
-    
+
     if record:
         return Image(record[0], record[1], record[2], record[3], record[4])
     else:
         return None
-
-
-# test = Image(0, "newimg", 1, 1000, datetime.datetime.now())
-#
-# add_image_data_to_db(test)
