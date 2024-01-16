@@ -1,19 +1,16 @@
 import datetime
 import os
 
-from flask import Flask, render_template, request, send_from_directory, abort, jsonify
+from flask import Flask, request, jsonify
+from flask_cors import CORS, cross_origin
 from flask_jwt_extended import JWTManager, jwt_required, create_access_token, get_jwt_identity
 from werkzeug.utils import secure_filename
 
 from dbConnection import match_credentials_query, get_user_id_query, get_user_files_query, get_user_by_username_query, \
-    add_user_to_db, add_image_data_to_db, delete_image_from_db, get_image_by_id
-
-from flask_cors import CORS, cross_origin
-from psycopg2.sql import DEFAULT
-
+    add_user_to_db, add_image_data_to_db, delete_image_from_db, get_image_by_id, add_log_entry
 from fileManagement import get_signed_urls_for_user, upload_file_to_bucket, remove_image_from_cache, \
     delete_image_from_storage
-from models import User, Image
+from models import User, Image, LogEntry
 
 app = Flask(__name__)
 CORS(app)  # This will enable CORS for all routes
@@ -36,11 +33,6 @@ def get_user_files(user_id: int):
     return get_user_files_query(user_id)
 
 
-def save_to_blob_storage(file):
-    # here we will save the file to the external storage
-    return True
-
-
 # Create a route to authenticate your users and return JWTs. The
 # create_access_token() function is used to actually generate the JWT.
 @app.route("/login", methods=["POST"])
@@ -53,8 +45,11 @@ def login():
         id = get_user_id_query(username)
         access_token_users_dict[access_token] = id
     else:
+        add_log_entry(LogEntry(1, "INFO", datetime.datetime.now(), "User {} failed login attempt".format(username)))
+
         return jsonify({"msg": "Bad username or password"}), 401
 
+    add_log_entry(LogEntry(1, "INFO", datetime.datetime.now(), "User {} logged in".format(username)))
     return jsonify(access_token=access_token)
 
 
@@ -84,6 +79,9 @@ def get_available_files():
     current_user = get_jwt_identity()
     images = get_user_files(get_user_id_query(current_user))
     images_with_urls = get_signed_urls_for_user(bucket_storage, images)
+
+    add_log_entry(LogEntry(1, "INFO", datetime.datetime.now(), "User {} requested images".format(current_user)))
+
     return jsonify(data=[e.serialize() for e in images_with_urls]), 200
 
 
@@ -105,6 +103,9 @@ def upload_file():
     add_image_data_to_db(img)
     link = upload_file_to_bucket(bucket_storage, filename, img.get_bucket_path())
     os.remove(filename)
+
+    add_log_entry(
+        LogEntry(1, "INFO", datetime.datetime.now(), "User {} uploaded file {}".format(current_user, img.name)))
 
     return str(link)
 
@@ -140,9 +141,15 @@ def register():
         add_user_to_db(new_user)
     except Exception as e:
         print(e)
+        add_log_entry(LogEntry(1, "INFO", datetime.datetime.now(), "Could not register new user"))
+
         return jsonify({"msg": "Error during user registration"}), 500
 
+    add_log_entry(
+        LogEntry(1, "INFO", datetime.datetime.now(), "User {} registered successfully".format(user_data["username"])))
+
     return jsonify({"msg": "User registered successfully"}), 200
+
 
 @app.route('/delete_image', methods=['POST'])
 @jwt_required()
@@ -153,6 +160,8 @@ def delete_image():
 
     image = get_image_by_id(image_id)
     if not image or image.folder_id != get_user_id_query(current_user):
+        add_log_entry(LogEntry(1, "INFO", datetime.datetime.now(), "Image not found or unauthorized".format(image.name)))
+
         return jsonify({"msg": "Image not found or unauthorized"}), 404
 
     delete_image_from_db(image_id)
@@ -161,7 +170,10 @@ def delete_image():
 
     delete_image_from_storage(bucket_storage, image.get_bucket_path())
 
+    add_log_entry(LogEntry(1, "INFO", datetime.datetime.now(), "Image {} deleted successfully".format(image.name)))
+
     return jsonify({"msg": "Image deleted successfully"}), 200
+
 
 if __name__ == '__main__':
     app.run(debug=True, host="0.0.0.0", port=int(os.environ.get("PORT", 8080)))

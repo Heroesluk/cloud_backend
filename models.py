@@ -30,3 +30,14 @@ class Image:
 
     def get_bucket_path(self):
         return str(self.folder_id) + "/" + self.name
+
+
+class LogEntry:
+    def __init__(self, id: int, severity: str, timestamp: datetime, message: str):
+        self.id = id
+        self.severity = severity
+        self.timestamp = timestamp
+        self.message = message
+
+    def __str__(self):
+        return str(self.timestamp) + " - " + self.severity.upper() + ": " + self.message

@@ -13,3 +13,12 @@ CREATE TABLE images
     image_size     INTEGER NOT NULL,
     image_add_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+
+
+CREATE TABLE Logger (
+    id SERIAL PRIMARY KEY,
+    severity VARCHAR(255),
+    timestamp VARCHAR(255),
+    message VARCHAR(255)
+);
