@@ -1,5 +1,6 @@
 import datetime
 import os
+import zipfile
 
 from flask import Flask, request, jsonify, render_template, send_from_directory
 from flask_cors import CORS, cross_origin
@@ -136,7 +137,7 @@ def upload_file():
         LogEntry(1, "INFO", datetime.datetime.now(), "User {} uploaded file {}".format(current_user, img.name)))
 
     return str(link)
-    
+
 @app.route('/', methods=['GET'])
 def test():
     return "true", 200
