@@ -114,6 +114,10 @@ def upload_file():
                 to_return = link if to_return == '' else ''
 
                 os.remove(unzipped)
+                
+                add_log_entry(
+                    LogEntry(1, "INFO", datetime.datetime.now(), "User {} uploaded file {}".format(current_user, unzipped)))
+
         os.remove(filename)
         return str(to_return)
     except Exception as e:
@@ -128,8 +132,11 @@ def upload_file():
     link = upload_file_to_bucket(bucket_storage, filename, img.get_bucket_path())
     os.remove(filename)
 
-    return str(link)
+    add_log_entry(
+        LogEntry(1, "INFO", datetime.datetime.now(), "User {} uploaded file {}".format(current_user, img.name)))
 
+    return str(link)
+    
 @app.route('/', methods=['GET'])
 def test():
     return "true", 200
