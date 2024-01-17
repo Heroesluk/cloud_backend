@@ -95,6 +95,30 @@ def upload_file():
     filename = secure_filename(file_data.filename)
     file_data.save(filename)
 
+    try:
+        to_return = ''
+        with zipfile.ZipFile(filename, 'r') as zip_ref:
+            # Assuming all files are images
+            for file_info in zip_ref.infolist():
+                
+                unzipped = secure_filename(file_info.filename)
+                with zip_ref.open(file_info.filename) as source, open(unzipped, 'wb') as target:
+                    target.write(source.read())
+
+                size = os.path.getsize(unzipped)
+                img = Image(0, unzipped, get_user_id_query(current_user),
+                            size, datetime.datetime.now())
+                add_image_data_to_db(img)
+
+                link = upload_file_to_bucket(bucket_storage, unzipped, img.get_bucket_path())
+                to_return = link if to_return == '' else ''
+
+                os.remove(unzipped)
+        os.remove(filename)
+        return str(to_return)
+    except Exception as e:
+        pass
+
     size = os.path.getsize(filename)
 
     img = Image(0, filename, get_user_id_query(current_user),
@@ -104,11 +128,7 @@ def upload_file():
     link = upload_file_to_bucket(bucket_storage, filename, img.get_bucket_path())
     os.remove(filename)
 
-    add_log_entry(
-        LogEntry(1, "INFO", datetime.datetime.now(), "User {} uploaded file {}".format(current_user, img.name)))
-
     return str(link)
-
 
 @app.route('/', methods=['GET'])
 def test():
